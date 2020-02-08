@@ -62,7 +62,6 @@ def build_dependency_pattern(doc, match_tokens, feature_dict=DEFAULT_BUILD_PATTE
     # Checks
     if not nx_graph:
         nx_graph = util.doc_to_nx_graph(doc)
-    util.annotate_token_depth(doc)
     connected_tokens = util.smallest_connected_subgraph(
         match_tokens, doc, nx_graph=nx_graph)
     match_token_ids = util.token_idxs(match_tokens)
