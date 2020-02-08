@@ -3,23 +3,25 @@ import networkx as nx
 from spacy.tokens import Token
 
 
-def annotate_token_depth(doc):
-    '''Annotate token depth in the syntactic tree'''
-    Token.set_extension('depth', default=None, force=True)
-    for word in doc:
+def syntactic_depth(token):
+    '''Finds token depth in the syntactic tree'''
+
+    if token._._syntactic_depth is None:
         depth = 0
-        current_word = word
+        current_word = token
         while not current_word == current_word.head:
             depth += 1
             current_word = current_word.head
-        word._.depth = depth
-    return doc
+        token._._syntactic_depth = depth
+    return token._._syntactic_depth
 
+Token.set_extension('_syntactic_depth', default=None, force=True)
+Token.set_extension('syntactic_depth', getter=syntactic_depth, force=True)
 
 def filter_by_depth(depths, tokens):
     if isinstance(depths, int):
         depths = set([depths])
-    return [t for t in tokens if t._.depth in depths]
+    return [t for t in tokens if t._.syntactic_depth in depths]
 
 
 def shallowest_token(tokens):
@@ -28,7 +30,7 @@ def shallowest_token(tokens):
 
 
 def sort_by_depth(tokens):
-    return sorted(tokens, key=lambda w: (w._.depth, w.i))
+    return sorted(tokens, key=lambda w: (w._.syntactic_depth, w.i))
 
 
 def sort_by_idx(tokens):
@@ -69,7 +71,7 @@ def shortest_dependency_path(nx_graph, doc, source, target):
         idx = int(node.split('-')[-1])
         token = doc[idx]
         dep_path.append(token)
-    dep_path = sorted(dep_path, key=lambda t: t._.depth)
+    dep_path = sorted(dep_path, key=lambda t: t._.syntactic_depth)
     return dep_path
 
 
@@ -77,12 +79,8 @@ def smallest_connected_subgraph(with_tokens, doc, nx_graph=None):
     # Find root nodes
     if not nx_graph:
         nx_graph = doc_to_nx_graph(doc)
-    try:
-        doc[0]._.depth
-    except AttributeError:
-        annotate_token_depth(doc)
-    min_depth = min([t._.depth for t in with_tokens])
-    roots = [t for t in with_tokens if t._.depth == min_depth]
+    min_depth = min([t._.syntactic_depth for t in with_tokens])
+    roots = [t for t in with_tokens if t._.syntactic_depth == min_depth]
     non_roots = [t for t in with_tokens if t not in roots]
     tokens_touched = roots + non_roots
     # For each non-root token, trace paths to each root. This will touch every non-root token we're looking for
